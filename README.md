@@ -13,6 +13,12 @@ Sistema de watchdog inteligente para nodos Meshtastic basado en **ATtiny13A**. D
 
 A diferencia de un watchdog por tiempo fijo, este sistema **detecta actividad real** en el bus del módulo de radio. Si el nodo sigue funcionando, nunca se resetea innecesariamente.
 
+También está disponible como **módulo independiente** que puede añadirse a nodos Meshtastic ya existentes, sin necesidad de usar la PCB Albatastic PRO.
+
+<div align="center">
+  <img src="images/WatchdogPCB.jpeg" width="60%" />
+</div>
+
 ---
 
 ## ¿Cómo funciona?
@@ -27,15 +33,17 @@ El ATtiny13A monitoriza el pin **DIO1 del módulo de radio** (SX1262 / LR1121). 
 
 > El reset preventivo puede desactivarse por software modificando `PREVENTIVO_ACTIVO`.
 
+> 💡 **Nota sobre el tráfico de malla**: Debido al funcionamiento de la red Meshtastic, es raro que un nodo no reciba o retransmita algún mensaje en más de 6 horas si hay tráfico en la zona. Si el nodo va a estar en una ubicación con poco o ningún tráfico, se recomienda aumentar el tiempo de detección (`HORAS_SOFT_PRO`) para evitar resets innecesarios. Si todo funciona correctamente y hay tráfico en la red, el watchdog no debería saltar.
+
 ---
 
 ## Pinout ATtiny13A
 
 ```
-        RST  1 ─┐   ┌─ 8  VCC (VBAT directo, LiPo 3.0–4.2V)
-   OPCION2 PB3 2 ─┤   ├─ 7  PB2 ← DIO1 módulo radio (via 10kΩ)
-   OPCION1 PB4 3 ─┤   ├─ 6  PB1 → RST MCU (reset SUAVE, via 100Ω)
-          GND  4 ─┘   └─ 5  PB0 → Gate SI2312 (reset DURO, via 100Ω)
+                RST  1 ─┐   ┌─ 8  VCC (VBAT directo, LiPo 3.0–4.2V)
+        OPCION2 PB3  2 ─┤   ├─ 7  PB2 ← DIO1 módulo radio (via 10kΩ)
+        OPCION1 PB4  3 ─┤   ├─ 6  PB1 → RST MCU (reset SUAVE, via 100Ω)
+                GND  4 ─┘   └─ 5  PB0 → Gate SI2312 (reset DURO, via 100Ω)
 ```
 
 | Pin | Función |
@@ -156,6 +164,12 @@ Smart watchdog system for Meshtastic nodes based on the **ATtiny13A**. Designed 
 
 Unlike a fixed-timer watchdog, this system **detects real activity** on the radio module bus. As long as the node is working, it will never reset unnecessarily.
 
+It is also available as a **standalone module** that can be added to existing Meshtastic nodes, without requiring the Albatastic PRO PCB.
+
+<div align="center">
+  <img src="images/WatchdogPCB.jpeg" width="60%" />
+</div>
+
 ---
 
 ## How it works
@@ -170,15 +184,17 @@ The ATtiny13A monitors the **DIO1 pin of the radio module** (SX1262 / LR1121). T
 
 > The preventive reset can be disabled in software by setting `PREVENTIVO_ACTIVO` to `false`.
 
+> 💡 **Note on mesh traffic**: Due to how the Meshtastic network works, it is unlikely that a node will go more than 6 hours without receiving or forwarding at least one message if there is traffic in the area. If the node is going to be deployed in a low or no traffic location, it is recommended to increase the detection time (`HORAS_SOFT_PRO`) to avoid unnecessary resets. If everything is working correctly and there is network traffic, the watchdog should never trigger.
+
 ---
 
 ## ATtiny13A Pinout
 
 ```
-        RST  1 ─┐   ┌─ 8  VCC (direct VBAT, LiPo 3.0–4.2V)
-   OPTION2  PB3 2 ─┤   ├─ 7  PB2 ← DIO1 radio module (via 10kΩ)
-   OPTION1  PB4 3 ─┤   ├─ 6  PB1 → RST MCU (soft reset, via 100Ω)
-          GND  4 ─┘   └─ 5  PB0 → Gate SI2312 (hard reset, via 100Ω)
+              RST  1 ─┐   ┌─ 8  VCC (direct VBAT, LiPo 3.0–4.2V)
+        OPTION2 PB3  2 ─┤   ├─ 7  PB2 ← DIO1 radio module (via 10kΩ)
+        OPTION1 PB4  3 ─┤   ├─ 6  PB1 → RST MCU (soft reset, via 100Ω)
+              GND  4 ─┘   └─ 5  PB0 → Gate SI2312 (hard reset, via 100Ω)
 ```
 
 | Pin | Function |
