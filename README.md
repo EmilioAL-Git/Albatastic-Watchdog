@@ -33,7 +33,7 @@ El ATtiny13A monitoriza el pin **DIO1 del módulo de radio** (SX1262 / LR1121). 
 
 > El reset preventivo puede desactivarse por software modificando `PREVENTIVO_ACTIVO`.
 
-> 💡 **Nota sobre el tráfico de malla**: Debido al funcionamiento de la red Meshtastic, es raro que un nodo no reciba o retransmita algún mensaje en más de 6 horas si hay tráfico en la zona. Si el nodo va a estar en una ubicación con poco o ningún tráfico, se recomienda aumentar el tiempo de detección (`HORAS_SOFT_PRO`) para evitar resets innecesarios. Si todo funciona correctamente y hay tráfico en la red, el watchdog no debería saltar.
+> 💡 **Nota sobre el tráfico de la malla**: Debido al funcionamiento de la red Meshtastic, es raro que un nodo no reciba o retransmita algún mensaje en más de 6 horas si hay tráfico en la zona. Si el nodo va a estar en una ubicación con poco o ningún tráfico, se recomienda aumentar el tiempo de detección (`HORAS_SOFT_PRO`) para evitar resets innecesarios. Si todo funciona correctamente y hay tráfico en la red, el watchdog no debería saltar.
 
 ---
 
