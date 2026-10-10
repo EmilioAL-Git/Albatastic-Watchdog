@@ -15,49 +15,48 @@
 // -------------------------------------------------------
 // MODO TEST: cortocircuitar PB1 y PB4 al arrancar
 // -------------------------------------------------------
+// NOTA HARDWARE: PB2 y PB3 son entradas sin pull. Si DIO1 puede
+// quedar flotante (radio sin configurar / nodo en DFU), poner un
+// pulldown externo de ~100k para que el ruido no cuente como actividad.
+// -------------------------------------------------------
 
 // ═══════════════════════════════════════════════════════
 // CONFIGURACIÓN
 // ═══════════════════════════════════════════════════════
-
-#define PREVENTIVO_ACTIVO     1
-#define HORAS_PREVENTIVO      12
-
-#define HORAS_SOFT_PRO        4
-#define MINUTOS_EXTRA_HARD    10
-
-#define SEGUNDOS_SOFT_TEST    40
-#define SEGUNDOS_HARD_TEST    64
+#define PREVENTIVO_ACTIVO   1
+#define HORAS_PREVENTIVO    12
+#define HORAS_SOFT_PRO      4
+#define MINUTOS_EXTRA_HARD  10
+#define SEGUNDOS_SOFT_TEST  40
+#define SEGUNDOS_HARD_TEST  64
 
 // ═══════════════════════════════════════════════════════
 // NO TOCAR
 // ═══════════════════════════════════════════════════════
+#define WDT_SEG 8UL
+#define H_A_CICLOS(h)  ((uint16_t)((h) * 3600UL / WDT_SEG))
+#define M_A_CICLOS(m)  ((uint16_t)((m) * 60UL / WDT_SEG))
+#define S_A_CICLOS(s)  ((uint16_t)((s) / WDT_SEG))
 
-#define WDT_SEG               8UL
-#define H_A_CICLOS(h)         ((uint16_t)((h) * 3600UL / WDT_SEG))
-#define M_A_CICLOS(m)         ((uint16_t)((m) * 60UL  / WDT_SEG))
-#define S_A_CICLOS(s)         ((uint16_t)((s) / WDT_SEG))
+#define CICLOS_SOFT_PRO    H_A_CICLOS(HORAS_SOFT_PRO)
+#define CICLOS_HARD_PRO    (CICLOS_SOFT_PRO + M_A_CICLOS(MINUTOS_EXTRA_HARD))
+#define CICLOS_SOFT_TEST   S_A_CICLOS(SEGUNDOS_SOFT_TEST)
+#define CICLOS_HARD_TEST   S_A_CICLOS(SEGUNDOS_HARD_TEST)
+#define CICLOS_PREVENTIVO  H_A_CICLOS(HORAS_PREVENTIVO)
 
-#define CICLOS_SOFT_PRO       H_A_CICLOS(HORAS_SOFT_PRO)
-#define CICLOS_HARD_PRO       (CICLOS_SOFT_PRO + M_A_CICLOS(MINUTOS_EXTRA_HARD))
-#define CICLOS_SOFT_TEST      S_A_CICLOS(SEGUNDOS_SOFT_TEST)
-#define CICLOS_HARD_TEST      S_A_CICLOS(SEGUNDOS_HARD_TEST)
-#define CICLOS_PREVENTIVO     H_A_CICLOS(HORAS_PREVENTIVO)
-
-#define RESETPIN    PB0
-#define RSTPIN1     PB1
-#define WATCHPIN1   PB2
-#define WATCHPIN2   PB3
-#define RSTPIN2     PB4
+#define RESETPIN   PB0
+#define RSTPIN1    PB1
+#define WATCHPIN1  PB2
+#define WATCHPIN2  PB3
+#define RSTPIN2    PB4
 
 uint16_t ciclos_acumulados = 0;
 uint16_t ciclos_sin_act_n1 = 0;
 uint16_t ciclos_sin_act_n2 = 0;
-uint16_t umbral_soft       = 0;
-uint16_t umbral_hard       = 0;
-
-uint8_t soft_hecho_n1 = 0;
-uint8_t soft_hecho_n2 = 0;
+uint16_t umbral_soft = 0;
+uint16_t umbral_hard = 0;
+uint8_t  soft_hecho_n1 = 0;
+uint8_t  soft_hecho_n2 = 0;
 
 volatile uint8_t act_n1 = 0;
 volatile uint8_t act_n2 = 0;
@@ -66,8 +65,9 @@ volatile uint8_t prev_pinb = 0;
 
 ISR(PCINT0_vect) {
   uint8_t actual = PINB;
-  if ((actual ^ prev_pinb) & _BV(WATCHPIN1)) act_n1 = 1;
-  if ((actual ^ prev_pinb) & _BV(WATCHPIN2)) act_n2 = 1;
+  uint8_t cambios = actual ^ prev_pinb;
+  if (cambios & _BV(WATCHPIN1)) act_n1 = 1;
+  if (cambios & _BV(WATCHPIN2)) act_n2 = 1;
   prev_pinb = actual;
 }
 
@@ -75,8 +75,6 @@ ISR(WDT_vect) {
   wdt_flag = 1;
 }
 
-// -------------------------------------------------------
-// Delay compartido: un solo _delay_ms(1) inline, reutilizado
 // -------------------------------------------------------
 void delay_ms(uint16_t ms) {
   while (ms--) _delay_ms(1);
@@ -93,7 +91,11 @@ void setup_wdt() {
 }
 
 void sleep_wdt() {
-  GIFR  |= _BV(PCIF);
+  // Resincroniza el estado previo: la ISR solo está activa durante
+  // el sueño, así que cualquier cambio ocurrido despierto dejaría
+  // prev_pinb obsoleto y podría dar actividad falsa.
+  prev_pinb = PINB;
+  GIFR |= _BV(PCIF);
   GIMSK |= _BV(PCIE);
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
   sleep_enable();
@@ -104,12 +106,12 @@ void sleep_wdt() {
 
 void reset_suave(uint8_t pin) {
   wdt_disable();
-  DDRB  |= _BV(pin);
+  DDRB |= _BV(pin);
   PORTB &= ~_BV(pin);
   delay_ms(200);
   PORTB |= _BV(pin);
   delay_ms(50);
-  DDRB  &= ~_BV(pin);
+  DDRB &= ~_BV(pin);
   PORTB &= ~_BV(pin);
   setup_wdt();
 }
@@ -117,44 +119,42 @@ void reset_suave(uint8_t pin) {
 void reset_duro() {
   reset_suave(RSTPIN1);
   reset_suave(RSTPIN2);
-
   wdt_disable();
   delay_ms(1000);
-
   PORTB |= _BV(RESETPIN);
   delay_ms(500);
   PORTB &= ~_BV(RESETPIN);
-
   setup_wdt();
 }
 
 uint8_t detectar_modo_test() {
-  DDRB  |= _BV(RSTPIN1);
+  DDRB |= _BV(RSTPIN1);
   PORTB &= ~_BV(RSTPIN1);
-
-  DDRB  &= ~_BV(RSTPIN2);
+  DDRB &= ~_BV(RSTPIN2);
   PORTB |= _BV(RSTPIN2);
-
   delay_ms(10);
-
   uint8_t test = !(PINB & _BV(RSTPIN2));
-
-  DDRB  &= ~_BV(RSTPIN1);
+  DDRB &= ~_BV(RSTPIN1);
   PORTB &= ~_BV(RSTPIN2);
-
   return test;
+}
+
+// Procesa los flags de actividad. Si hay actividad, reinicia el
+// contador de ese nodo Y rearma el reset suave (nuevo episodio).
+void procesar_actividad() {
+  if (act_n1) { act_n1 = 0; ciclos_sin_act_n1 = 0; soft_hecho_n1 = 0; }
+  if (act_n2) { act_n2 = 0; ciclos_sin_act_n2 = 0; soft_hecho_n2 = 0; }
 }
 
 // -------------------------------------------------------
 void setup() {
-  DDRB  |= _BV(RESETPIN);
+  DDRB |= _BV(RESETPIN);
   PORTB &= ~_BV(RESETPIN);
 
-  DDRB  &= ~(_BV(RSTPIN1) | _BV(RSTPIN2) | _BV(WATCHPIN1) | _BV(WATCHPIN2));
+  DDRB &= ~(_BV(RSTPIN1) | _BV(RSTPIN2) | _BV(WATCHPIN1) | _BV(WATCHPIN2));
   PORTB &= ~(_BV(RSTPIN1) | _BV(RSTPIN2) | _BV(WATCHPIN1) | _BV(WATCHPIN2));
 
   PCMSK |= _BV(PCINT2) | _BV(PCINT3);
-
   prev_pinb = PINB;
 
   if (detectar_modo_test()) {
@@ -174,17 +174,18 @@ void loop() {
   sleep_wdt();
 
   if (!wdt_flag) {
-    if (act_n1) { act_n1 = 0; ciclos_sin_act_n1 = 0; }
-    if (act_n2) { act_n2 = 0; ciclos_sin_act_n2 = 0; }
+    // Despertó por PCINT: solo registrar actividad
+    procesar_actividad();
     return;
   }
   wdt_flag = 0;
 
-  if (act_n1) { act_n1 = 0; ciclos_sin_act_n1 = 0; }
-  else ciclos_sin_act_n1++;
-
-  if (act_n2) { act_n2 = 0; ciclos_sin_act_n2 = 0; }
-  else ciclos_sin_act_n2++;
+  // Ciclo de 8s: si hubo actividad se reinicia el contador, si no, suma
+  uint8_t hubo_n1 = act_n1;
+  uint8_t hubo_n2 = act_n2;
+  procesar_actividad();
+  if (!hubo_n1) ciclos_sin_act_n1++;
+  if (!hubo_n2) ciclos_sin_act_n2++;
 
   ciclos_acumulados++;
 
