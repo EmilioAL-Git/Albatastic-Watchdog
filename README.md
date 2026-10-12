@@ -174,6 +174,29 @@ Existen dos variantes en el repositorio:
 
 Todos los tiempos y opciones se configuran al inicio del archivo correspondiente.
 
+### Ajustes para flashear (Arduino IDE + MicroCore)
+
+Instala el core **MicroCore** (MCUdude) desde el gestor de placas y selecciona en el menú **Herramientas**:
+
+| Ajuste | Valor |
+|--------|-------|
+| Board | ATtiny13 |
+| Variant | ATtiny13A |
+| Clock | 1.2 MHz internal osc. |
+| BOD | 1.8 V |
+| Millis/Micros | Disabled |
+| Programmer | El que uses (USBasp, Arduino as ISP, etc.) |
+
+Pasos:
+
+1. Conecta el programador ISP al ATtiny.
+2. Aplica los fuses con **Herramientas → Burn Bootloader**. En ATtiny no se graba ningún bootloader, solo se escriben los fuses. Hazlo **antes** de subir el sketch.
+3. Sube el sketch con **Subir usando programador** (*Upload Using Programmer*).
+
+> ⚠️ **Reloj**: el valor de *Clock* debe coincidir con el reloj real del chip, porque `_delay_ms()` depende de `F_CPU` (afecta a los pulsos de reset de 200 ms y al segundo de espera antes del corte del relé). Los tiempos de vigilancia usan el WDT interno y no dependen de este ajuste.
+
+> ⚠️ **No toques los fuses `RSTDISBL` ni `SPIEN`**. Si se activa `RSTDISBL`, PB5 deja de ser pin de reset y ya no se puede reprogramar el chip con un programador ISP normal.
+
 ---
 
 ## Integración con Albatastic PRO
@@ -373,6 +396,29 @@ Two variants are available in the repository:
 - `firmware/fusion/` — 2 nodes, shared power-cut relay, independent soft reset per node
 
 All timings and options are configured at the top of the corresponding file.
+
+### Flashing settings (Arduino IDE + MicroCore)
+
+Install the **MicroCore** core (MCUdude) from the Boards Manager and select the following in the **Tools** menu:
+
+| Setting | Value |
+|---------|-------|
+| Board | ATtiny13 |
+| Variant | ATtiny13A |
+| Clock | 1.2 MHz internal osc. |
+| BOD | 1.8 V |
+| Millis/Micros | Disabled |
+| Programmer | Whichever you use (USBasp, Arduino as ISP, etc.) |
+
+Steps:
+
+1. Connect the ISP programmer to the ATtiny.
+2. Apply the fuses with **Tools → Burn Bootloader**. No bootloader is written on an ATtiny, only the fuses. Do this **before** uploading the sketch.
+3. Upload the sketch with **Upload Using Programmer**.
+
+> ⚠️ **Clock**: the *Clock* setting must match the chip's real clock, because `_delay_ms()` depends on `F_CPU` (it affects the 200 ms reset pulses and the 1 s wait before the relay cut). The monitoring times use the internal WDT and do not depend on this setting.
+
+> ⚠️ **Do not touch the `RSTDISBL` or `SPIEN` fuses**. If `RSTDISBL` is enabled, PB5 stops being the reset pin and the chip can no longer be reprogrammed with a regular ISP programmer.
 
 ---
 
