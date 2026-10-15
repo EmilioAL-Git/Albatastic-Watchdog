@@ -15,6 +15,10 @@
 // OPCION2 abierto  → preventivo DESACTIVADO
 // OPCION2 soldado  → preventivo ACTIVADO (cada HORAS_PREVENTIVO)
 // -------------------------------------------------------
+// NOTA HARDWARE: PB2 es entrada sin pull. Si DIO1 puede quedar
+// flotante (radio sin configurar / nodo en DFU), poner un pulldown
+// externo de ~100k para que el ruido no cuente como actividad.
+// -------------------------------------------------------
 
 // ═══════════════════════════════════════════════════════
 // CONFIGURACIÓN
@@ -114,6 +118,14 @@ void reset_duro() {
   setup_wdt();
 }
 
+// Si hubo actividad: reinicia el contador Y rearma el reset suave
+// (nuevo episodio de inactividad).
+void procesar_actividad() {
+  actividad_detectada  = 0;
+  ciclos_sin_actividad = 0;
+  soft_hecho           = 0;
+}
+
 // -------------------------------------------------------
 // SETUP
 // -------------------------------------------------------
@@ -163,17 +175,15 @@ void loop() {
   sleep_wdt();
 
   if (!wdt_flag) {
-    if (actividad_detectada) {
-      actividad_detectada  = 0;
-      ciclos_sin_actividad = 0;
-    }
+    // Despertó por PCINT: solo registrar actividad
+    if (actividad_detectada) procesar_actividad();
     return;
   }
   wdt_flag = 0;
 
+  // Ciclo de 8s: si hubo actividad se reinicia, si no, suma
   if (actividad_detectada) {
-    actividad_detectada  = 0;
-    ciclos_sin_actividad = 0;
+    procesar_actividad();
   } else {
     ciclos_sin_actividad++;
   }
